@@ -1,0 +1,180 @@
+// Prisma 7 schema — pilot-fatigue-system
+// Generator: prisma-client (Rust-free, required in v7)
+// Output: explicit path required in v7 (no longer written to node_modules)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// datasource block intentionally has no `url` field.
+// Connection is configured in prisma.config.ts (Prisma 7 standard).
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  OPERATIONS_CONTROLLER
+  ANALYST
+}
+
+enum RiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  FLAGGED
+  ABORTED
+}
+
+enum RecommendationType {
+  REST_BREAK
+  CREW_CHANGE
+  ALERT_CREW
+  MONITOR_CLOSELY
+  NOTIFY_GROUND
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────
+
+/// System user (operations controller / analyst)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      UserRole @default(OPERATIONS_CONTROLLER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+/// Pilot being monitored
+model Pilot {
+  id           String   @id @default(uuid())
+  employeeId   String   @unique @map("employee_id")
+  name         String
+  licenseNumber String  @unique @map("license_number")
+  email        String?  @unique
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  flights     Flight[]
+  sessions    MonitoringSession[]
+
+  @@index([employeeId])
+  @@map("pilots")
+}
+
+/// A single flight assignment
+model Flight {
+  id         String   @id @default(uuid())
+  flightCode String   @unique @map("flight_code")
+  origin     String
+  destination String
+  scheduledAt DateTime @map("scheduled_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  pilotId    String   @map("pilot_id")
+  pilot      Pilot    @relation(fields: [pilotId], references: [id])
+
+  sessions   MonitoringSession[]
+
+  @@index([pilotId])
+  @@index([scheduledAt])
+  @@map("flights")
+}
+
+/// One monitoring session per pilot per flight leg
+model MonitoringSession {
+  id           String        @id @default(uuid())
+  status       SessionStatus @default(ACTIVE)
+  startedAt    DateTime      @map("started_at")
+  endedAt      DateTime?     @map("ended_at")
+  alertCount   Int           @default(0) @map("alert_count")
+  notes        String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  pilotId      String        @map("pilot_id")
+  pilot        Pilot         @relation(fields: [pilotId], references: [id])
+
+  flightId     String        @map("flight_id")
+  flight       Flight        @relation(fields: [flightId], references: [id])
+
+  measurements FatigueMeasurement[]
+  riskHistory  RiskHistory[]
+  recommendations Recommendation[]
+
+  @@index([pilotId])
+  @@index([flightId])
+  @@index([startedAt])
+  @@index([status])
+  @@map("monitoring_sessions")
+}
+
+/// Time-series measurement captured during a session (one record per CV frame batch)
+model FatigueMeasurement {
+  id                  String   @id @default(uuid())
+  capturedAt          DateTime @map("captured_at")
+  fatigueScore        Float    @map("fatigue_score")        // 0–100
+  eyeClosurePercent   Float    @map("eye_closure_percent")  // PERCLOS
+  blinkRatePerMin     Float    @map("blink_rate_per_min")
+  yawnCount           Int      @map("yawn_count")           // per measurement window
+  headPoseYaw         Float    @map("head_pose_yaw")        // degrees
+  headPosePitch       Float    @map("head_pose_pitch")      // degrees
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  sessionId           String   @map("session_id")
+  session             MonitoringSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([capturedAt])
+  @@index([sessionId, capturedAt])  // common query: measurements for session ordered by time
+  @@map("fatigue_measurements")
+}
+
+/// Snapshot of risk level classification over time within a session
+model RiskHistory {
+  id          String    @id @default(uuid())
+  riskLevel   RiskLevel @map("risk_level")
+  fatigueScore Float    @map("fatigue_score")
+  triggeredAt DateTime  @map("triggered_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  sessionId   String    @map("session_id")
+  session     MonitoringSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([triggeredAt])
+  @@index([riskLevel])
+  @@map("risk_history")
+}
+
+/// AI-generated recommendation issued during a session
+model Recommendation {
+  id          String             @id @default(uuid())
+  type        RecommendationType
+  severity    RiskLevel
+  message     String
+  issuedAt    DateTime           @map("issued_at")
+  acknowledgedAt DateTime?       @map("acknowledged_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  sessionId   String             @map("session_id")
+  session     MonitoringSession  @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([issuedAt])
+  @@index([severity])
+  @@map("recommendations")
+}
