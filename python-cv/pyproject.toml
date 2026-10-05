@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fatigue_cv"
+version = "0.1.0"
+description = "Computer vision worker for pilot fatigue system"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "opencv-contrib-python==5.0.0.93",
+    "mediapipe==1.0.1",
+    "numpy==2.4.6",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==9.1.1",
+]
