@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class CameraSettings:
     device_id: int = 0
     width: int = 640
     height: int = 480
+    fps: int = 30
 
 @dataclass
 class DetectionSettings:
@@ -13,5 +14,5 @@ class DetectionSettings:
 
 @dataclass
 class AppSettings:
-    camera: CameraSettings = CameraSettings()
-    detection: DetectionSettings = DetectionSettings()
+    camera: CameraSettings = field(default_factory=CameraSettings)
+    detection: DetectionSettings = field(default_factory=DetectionSettings)
