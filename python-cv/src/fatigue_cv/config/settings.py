@@ -11,6 +11,7 @@ class CameraSettings:
 class DetectionSettings:
     min_face_detection_confidence: float = 0.5
     min_face_presence_confidence: float = 0.5
+    model_path: str = "models/face_landmarker.task"
 
 @dataclass
 class AppSettings:
