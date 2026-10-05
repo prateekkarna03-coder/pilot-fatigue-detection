@@ -8,8 +8,11 @@ import {
   ClipboardList,
   FileText,
   ShieldCheck,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -20,6 +23,13 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    await signOut({ callbackUrl: "/login" });
+  };
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-[#e2e8f0] bg-white">
@@ -55,7 +65,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-[#e2e8f0] p-4">
+      <div className="flex flex-col gap-3 border-t border-[#e2e8f0] p-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1e2d4a] text-white text-xs font-semibold">
             OP
@@ -65,6 +75,15 @@ export function Sidebar() {
             <span className="text-[10px] text-[#94a3b8]">ops@aviation.sys</span>
           </div>
         </div>
+        
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {isLoggingOut ? "Logging out..." : "Logout"}
+        </button>
       </div>
     </aside>
   );
