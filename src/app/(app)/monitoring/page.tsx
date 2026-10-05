@@ -1,24 +1,59 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { TopBar } from "@/components/layout/top-bar";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FatigueScorePanel } from "@/components/monitoring/fatigue-score-panel";
 import { SignalMetricsPanel } from "@/components/monitoring/signal-metrics-panel";
 import { TrendChart } from "@/components/monitoring/trend-chart";
 import { AiRecommendationsPanel } from "@/components/monitoring/ai-recommendations-panel";
+import { StopMonitoringButton } from "@/components/monitoring/stop-monitoring-button";
 import { LIVE_METRICS, TREND_DATA, AI_RECOMMENDATIONS } from "@/data/placeholder";
 
 export const metadata: Metadata = { title: "Live Monitoring" };
 
-// Pilot context for the demo — will come from session/context in production
-const MONITORED_PILOT = {
-  name: "Capt. James Morrison",
-  flightId: "AA-2847",
-  startTime: "08:00 UTC",
-  elapsed: "6h 12m",
-};
+export default async function MonitoringPage() {
+  const session = await getServerSession(authOptions);
 
-export default function MonitoringPage() {
+  if (!session?.user?.email) {
+    redirect("/login");
+  }
+
+  const pilot = await prisma.pilot.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!pilot) {
+    redirect("/dashboard");
+  }
+
+  // Fetch exactly ONE active session
+  const activeSession = await prisma.monitoringSession.findFirst({
+    where: {
+      pilotId: pilot.id,
+      status: "ACTIVE",
+    },
+    include: {
+      flight: true,
+    },
+  });
+
+  if (!activeSession) {
+    redirect("/dashboard"); // Safe fallback if no sessions are natively active
+  }
+
+  // Calculate elapsed time (mock styling formatting applied real-time)
+  // eslint-disable-next-line
+  const elapsedMs = Date.now() - activeSession.startedAt.getTime();
+  const elapsedHours = Math.floor(elapsedMs / (1000 * 60 * 60));
+  const elapsedMinutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+  const elapsedFormatted = `${elapsedHours}h ${elapsedMinutes}m`;
+  
+  // Format start time using UTC roughly
+  const startLocalFormatted = activeSession.startedAt.toISOString().slice(11, 16) + " UTC";
+
   const {
     fatigueScore,
     riskLevel,
@@ -33,11 +68,9 @@ export default function MonitoringPage() {
     <>
       <TopBar
         title="Live Monitoring"
-        subtitle={`${MONITORED_PILOT.name} · Flight ${MONITORED_PILOT.flightId} · Elapsed: ${MONITORED_PILOT.elapsed}`}
+        subtitle={`${pilot.name} · Flight ${activeSession.flight.flightCode} · Elapsed: ${elapsedFormatted}`}
         actions={
-          <Button variant="outline" size="sm">
-            End Session
-          </Button>
+          <StopMonitoringButton sessionId={activeSession.id} />
         }
       />
 
@@ -56,10 +89,10 @@ export default function MonitoringPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-2 pt-0">
               {[
-                ["Pilot", MONITORED_PILOT.name],
-                ["Flight ID", MONITORED_PILOT.flightId],
-                ["Session Start", MONITORED_PILOT.startTime],
-                ["Elapsed", MONITORED_PILOT.elapsed],
+                ["Pilot", pilot.name],
+                ["Flight ID", activeSession.flight.flightCode],
+                ["Session Start", startLocalFormatted],
+                ["Elapsed", elapsedFormatted],
               ].map(([label, value]) => (
                 <div
                   key={label}
