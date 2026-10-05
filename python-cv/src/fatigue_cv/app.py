@@ -3,6 +3,10 @@ import logging
 from fatigue_cv.config.settings import AppSettings
 from fatigue_cv.camera.capture import CameraStream
 from fatigue_cv.detection.face_landmarker import MediaPipeFaceLandmarker
+from fatigue_cv.features.eye import calculate_ear
+from fatigue_cv.features.mouth import calculate_mar
+from fatigue_cv.features.head_pose import calculate_head_pose
+from fatigue_cv.features.types import FeaturesResult
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,7 +26,7 @@ def main():
         fps=settings.camera.fps
     )
 
-    logging.info("Starting webcam demo with Face Landmarks...")
+    logging.info("Starting webcam demo with Face Landmarks and Features...")
     if not camera.open():
         logging.error("Could not initialize camera.")
         detector.close()
@@ -39,13 +43,21 @@ def main():
             landmarks = detector.process(frame)
             
             if landmarks:
-                # Optionally draw a few landmarks to verify MediaPipe works
                 h, w, _ = frame.shape
-                # Drawing just a few key points, e.g. nose tip (1)
-                for pt in landmarks.points[::20]: # skip points to reduce clutter
-                    x = int(pt.x * w)
-                    y = int(pt.y * h)
-                    cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
+                ear = calculate_ear(landmarks)
+                mar = calculate_mar(landmarks)
+                pitch, yaw, roll = calculate_head_pose(landmarks, w, h)
+                
+                features = FeaturesResult(ear=ear, mar=mar, pitch=pitch, yaw=yaw, roll=roll)
+                
+                # Overlay measurements
+                cv2.putText(frame, f"EAR: {features.ear:.3f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, f"MAR: {features.mar:.3f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, f"Pitch: {features.pitch:.1f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, f"Yaw: {features.yaw:.1f}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, f"Roll: {features.roll:.1f}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            else:
+                cv2.putText(frame, "No face detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             
             cv2.imshow("Webcam Demo", frame)
             
