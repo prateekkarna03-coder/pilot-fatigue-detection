@@ -8,3 +8,5 @@ class FeaturesResult:
     pitch: float
     yaw: float
     roll: float
+    left_ear: float | None = None
+    right_ear: float | None = None

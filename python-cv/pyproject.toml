@@ -12,6 +12,8 @@ dependencies = [
     "opencv-contrib-python==5.0.0.93",
     "mediapipe==1.0.1",
     "numpy==2.4.6",
+    "scikit-learn==1.6.1",
+    "pandas==2.3.0",
 ]
 
 [project.optional-dependencies]

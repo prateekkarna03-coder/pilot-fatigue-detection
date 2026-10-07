@@ -27,8 +27,13 @@ def _eye_aspect_ratio(eye_indices, landmarks: FaceLandmarks) -> float:
         
     return (v1 + v2) / (2.0 * h)
 
-def calculate_ear(landmarks: FaceLandmarks) -> float:
-    """Calculate average Eye Aspect Ratio using generic landmarks."""
+def calculate_eye_ears(landmarks: FaceLandmarks) -> tuple[float, float]:
+    """Calculate the left and right Eye Aspect Ratios."""
     left_ear = _eye_aspect_ratio(LEFT_EYE, landmarks)
     right_ear = _eye_aspect_ratio(RIGHT_EYE, landmarks)
+    return left_ear, right_ear
+
+def calculate_ear(landmarks: FaceLandmarks) -> float:
+    """Calculate average Eye Aspect Ratio using generic landmarks."""
+    left_ear, right_ear = calculate_eye_ears(landmarks)
     return (left_ear + right_ear) / 2.0

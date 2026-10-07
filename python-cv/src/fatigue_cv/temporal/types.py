@@ -10,3 +10,9 @@ class TemporalMetrics:
     total_yawns: int
     yawn_rate_per_minute: float
     is_yawning: bool
+    
+    smooth_pitch: float = 0.0
+    smooth_yaw: float = 0.0
+    smooth_roll: float = 0.0
+    
+    diagnostic_data: dict = None
