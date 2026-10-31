@@ -38,3 +38,23 @@ venv.bak/
 # Pytest
 .pytest_cache/
 *.task
+
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Python cache and environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated logs and temporary outputs
+*.log
+python-cv/test_output*.txt
+python-cv/test_results*.txt
+python-cv/pytest_out.txt
+python-cv/pytest_report.txt
+python-cv/tmp.txt

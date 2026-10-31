@@ -48,8 +48,9 @@ export function StartMonitoringButton({ flights }: StartMonitoringButtonProps) {
         return;
       }
 
-      // Success: Navigate to monitoring
+      // Success: Navigate to monitoring and refresh server-rendered state
       router.push("/monitoring");
+      router.refresh();
     } catch (err) {
       console.error(err);
       setError("A network error occurred.");

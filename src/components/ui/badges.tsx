@@ -3,15 +3,27 @@ import type { RiskLevel, SessionStatus, ReportStatus } from "@/types";
 
 // ── Risk Level Badge ───────────────────────────────────────────────────────
 
-const RISK_STYLES: Record<RiskLevel, string> = {
+export const RISK_STYLES: Record<string, string> = {
   Low: "bg-green-50 text-green-700 border-green-200",
+  LOW: "bg-green-50 text-green-700 border-green-200",
   Moderate: "bg-amber-50 text-amber-700 border-amber-200",
+  MODERATE: "bg-amber-50 text-amber-700 border-amber-200",
   High: "bg-orange-50 text-orange-700 border-orange-200",
+  HIGH: "bg-orange-50 text-orange-700 border-orange-200",
   Critical: "bg-red-50 text-red-700 border-red-200",
+  CRITICAL: "bg-red-50 text-red-700 border-red-200",
 };
 
+export function getRiskBadgeStyle(level: string): string {
+  if (RISK_STYLES[level]) return RISK_STYLES[level];
+  const normalizedKey = level
+    ? level.charAt(0).toUpperCase() + level.slice(1).toLowerCase()
+    : "Low";
+  return RISK_STYLES[normalizedKey] ?? RISK_STYLES.Low;
+}
+
 interface RiskBadgeProps {
-  level: RiskLevel;
+  level: RiskLevel | "LOW" | "MODERATE" | "HIGH" | "CRITICAL" | string;
   className?: string;
 }
 
@@ -20,7 +32,7 @@ export function RiskBadge({ level, className }: RiskBadgeProps) {
     <span
       className={cn(
         "inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium",
-        RISK_STYLES[level],
+        getRiskBadgeStyle(level),
         className
       )}
     >
@@ -35,6 +47,7 @@ const SESSION_STATUS_STYLES: Record<SessionStatus, string> = {
   Active: "bg-blue-50 text-blue-700 border-blue-200",
   Completed: "bg-slate-100 text-slate-600 border-slate-200",
   Flagged: "bg-red-50 text-red-700 border-red-200",
+  Aborted: "bg-red-50 text-red-700 border-red-200",
 };
 
 interface SessionStatusBadgeProps {

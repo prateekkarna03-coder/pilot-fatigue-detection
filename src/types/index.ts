@@ -1,7 +1,7 @@
 // ── Enums ──────────────────────────────────────────────────────────────────
 
 export type RiskLevel = "Low" | "Moderate" | "High" | "Critical";
-export type SessionStatus = "Active" | "Completed" | "Flagged";
+export type SessionStatus = "Active" | "Completed" | "Flagged" | "Aborted";
 export type ReportStatus = "Generated" | "Pending" | "Failed";
 export type ReportType = "Session Summary" | "Weekly Overview" | "Incident Report";
 
@@ -20,11 +20,13 @@ export interface FatigueMetrics {
 export interface TrendPoint {
   time: string;
   score: number;
+  timestamp?: string;
+  sequence?: number;
 }
 
 export interface AiRecommendation {
   id: string;
-  severity: RiskLevel;
+  severity: RiskLevel | "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
   message: string;
   issuedAt: string;
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { stopWorker } from "@/lib/worker-manager";
 
 export async function POST(req: Request) {
   try {
@@ -59,19 +60,31 @@ export async function POST(req: Request) {
     }
 
     if (monitoringSession.status !== "ACTIVE") {
-      return NextResponse.json(
-        { success: false, error: "Session is already completed or not active." },
-        { status: 409 }
-      );
+      return NextResponse.json({ success: true, alreadyStopped: true }, { status: 200 });
     }
 
-    await prisma.monitoringSession.update({
-      where: { id: sessionId },
-      data: {
-        status: "COMPLETED",
-        endedAt: new Date(),
-      },
+    let workerStopped = false;
+    try {
+      workerStopped = await stopWorker(sessionId);
+    } catch (error) {
+      console.error("[SessionsAPI] Worker shutdown threw an error.", { sessionId, error });
+    }
+    const finalStatus = workerStopped ? "COMPLETED" : "ABORTED";
+    const updated = await prisma.monitoringSession.updateMany({
+      where: { id: sessionId, pilotId: pilot.id, status: "ACTIVE" },
+      data: { status: finalStatus, endedAt: new Date() },
     });
+    if (updated.count !== 1) {
+      return NextResponse.json({ success: true, alreadyStopped: true }, { status: 200 });
+    }
+
+    if (!workerStopped) {
+      console.error("[SessionsAPI] Worker shutdown failed; session marked ABORTED.", { sessionId });
+      return NextResponse.json(
+        { success: false, error: "The monitoring worker did not stop cleanly. The session was marked aborted." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       { success: true },

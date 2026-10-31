@@ -4,6 +4,7 @@ import type { RiskLevel } from "@/types";
 interface FatigueScoreGaugeProps {
   score: number;
   riskLevel: RiskLevel;
+  modelKss?: number | null;
 }
 
 const RISK_COLOR: Record<RiskLevel, string> = {
@@ -30,6 +31,7 @@ const RISK_TEXT: Record<RiskLevel, string> = {
 export function FatigueScorePanel({
   score,
   riskLevel,
+  modelKss,
 }: FatigueScoreGaugeProps) {
   const color = RISK_COLOR[riskLevel];
 
@@ -89,6 +91,9 @@ export function FatigueScorePanel({
         {riskLevel} Risk
       </div>
       <p className="text-xs text-[#94a3b8]">Current Fatigue Score</p>
+      {modelKss !== null && modelKss !== undefined && (
+        <p className="text-xs text-[#94a3b8]">Model prediction: KSS {modelKss}</p>
+      )}
     </div>
   );
 }

@@ -34,3 +34,4 @@ class AppSettings:
     detection: DetectionSettings = field(default_factory=DetectionSettings)
     temporal: TemporalSettings = field(default_factory=TemporalSettings)
     diagnostic_mode: bool = True
+    telemetry_interval_seconds: float = 1.0

@@ -441,3 +441,64 @@ def test_left_and_right_eyes_use_separate_open_baselines(base_settings):
     m = tracker.update(_feat(0.25, left_ear=0.2, right_ear=0.3), 1.4)
     assert m.diagnostic_data["eye_state"] == "OPEN"
     assert m.diagnostic_data["left_baseline_ear"] < m.diagnostic_data["right_baseline_ear"]
+
+def test_tracker_angle_bounds_never_drift(base_settings):
+    # Regression test for unbounded 360 degree accumulation
+    # Angles should remain bounded in [-180, 180] strictly
+    tracker = TemporalTracker(base_settings)
+    
+    # Neutral pose
+    m = tracker.update(_feat(0.3, pitch=0.0, yaw=0.0, roll=0.0), 1.0)
+    assert m.smooth_pitch == 0.0
+    assert m.smooth_yaw == 0.0
+    
+    # Positive transition
+    m = tracker.update(_feat(0.3, pitch=170.0, yaw=170.0, roll=170.0), 1.1)
+    assert m.smooth_pitch == 170.0
+    
+    # Over the boundary to negative
+    m = tracker.update(_feat(0.3, pitch=-170.0, yaw=-175.0, roll=-179.0), 1.2)
+    assert m.smooth_pitch == -170.0
+    assert m.smooth_yaw == -175.0
+    
+    # Repeated transitions across the boundary
+    for i in range(10):
+        m = tracker.update(_feat(0.3, pitch=175.0, yaw=-175.0, roll=30.0), 1.3 + i*0.2)
+        assert -180 <= m.smooth_pitch <= 180
+        m = tracker.update(_feat(0.3, pitch=-175.0, yaw=175.0, roll=-30.0), 1.4 + i*0.2)
+        assert -180 <= m.smooth_pitch <= 180
+        assert -180 <= m.smooth_yaw <= 180
+        
+    # The actual saved values should also strictly be bounded to the raw input range
+    assert -180 <= tracker.prev_pitch <= 180
+    assert -180 <= tracker.prev_yaw <= 180
+    assert -180 <= tracker.prev_roll <= 180
+
+def test_tracker_angular_diff_preserves_blink_thresholds(base_settings):
+    tracker = TemporalTracker(base_settings)
+    
+    # Establish open eyes and pose (need 3 frames to fill EAR smoothing buffer)
+    tracker.update(_feat(0.3, pitch=170.0, yaw=0.0, roll=0.0), 1.0)
+    tracker.update(_feat(0.3, pitch=170.0, yaw=0.0, roll=0.0), 1.1)
+    tracker.update(_feat(0.3, pitch=170.0, yaw=0.0, roll=0.0), 1.2)
+    
+    # Start closing eyes, but keep pose steady so we enter closure successfully
+    tracker.update(_feat(0.1, pitch=170.0, yaw=0.0, roll=0.0), 1.3)
+    tracker.update(_feat(0.1, pitch=170.0, yaw=0.0, roll=0.0), 1.4)
+    
+    # Now that we are closed, jump the pose across boundary: 170 -> -170
+    tracker.update(_feat(0.1, pitch=-170.0, yaw=0.0, roll=0.0), 1.5)
+    assert tracker.blink_candidate_valid is False
+    
+    # Start over
+    tracker = TemporalTracker(base_settings)
+    tracker.update(_feat(0.3, pitch=175.0, yaw=0.0, roll=0.0), 1.0)
+    tracker.update(_feat(0.3, pitch=175.0, yaw=0.0, roll=0.0), 1.1)
+    tracker.update(_feat(0.3, pitch=175.0, yaw=0.0, roll=0.0), 1.2)
+    
+    # Start closing eyes
+    tracker.update(_feat(0.1, pitch=175.0, yaw=0.0, roll=0.0), 1.3)
+    tracker.update(_feat(0.1, pitch=175.0, yaw=0.0, roll=0.0), 1.4)
+    # Jump by 10 degrees (+175 -> -175 = 10)
+    tracker.update(_feat(0.1, pitch=-175.0, yaw=0.0, roll=0.0), 1.5)
+    assert tracker.blink_candidate_valid is True

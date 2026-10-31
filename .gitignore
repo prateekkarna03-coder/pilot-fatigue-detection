@@ -46,3 +46,30 @@ next-env.d.ts
 
 # generated Prisma Client
 /src/generated/prisma/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local databases and generated outputs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Local data and model artifacts
+.env.*
+!.env.example
+*.joblib
+*.pkl
+*.pickle
+
+# IDE and OS files
+.vscode/
+.idea/
+Thumbs.db

@@ -36,15 +36,11 @@ class TemporalTracker:
         self.prev_yaw: Optional[float] = None
         self.prev_roll: Optional[float] = None
 
-    def _unwrap_angle(self, current: float, previous: Optional[float]) -> float:
+    def _angular_diff(self, current: float, previous: Optional[float]) -> float:
         if previous is None:
-            return current
-        diff = current - previous
-        if diff > 180:
-            current -= 360
-        elif diff < -180:
-            current += 360
-        return current
+            return 0.0
+        diff = (current - previous + 180) % 360 - 180
+        return abs(diff)
 
     def update(self, features: Optional[FeaturesResult], current_time: float) -> TemporalMetrics:
         # Clean up old timestamps outside window
@@ -89,9 +85,9 @@ class TemporalTracker:
 
         self.last_face_time = current_time
         previous_pose = (self.prev_pitch, self.prev_yaw, self.prev_roll)
-        self.prev_pitch = self._unwrap_angle(features.pitch, self.prev_pitch)
-        self.prev_yaw = self._unwrap_angle(features.yaw, self.prev_yaw)
-        self.prev_roll = self._unwrap_angle(features.roll, self.prev_roll)
+        self.prev_pitch = features.pitch
+        self.prev_yaw = features.yaw
+        self.prev_roll = features.roll
         pose_change_threshold = getattr(self.settings, 'pose_change_threshold', 15.0)
         
         # 3. Smooth short-term EAR noise safely
@@ -154,9 +150,9 @@ class TemporalTracker:
             
             if self.closure_pose is not None:
                 pose_change = max(
-                    abs(self.prev_pitch - self.closure_pose[0]),
-                    abs(self.prev_yaw - self.closure_pose[1]),
-                    abs(self.prev_roll - self.closure_pose[2]),
+                    self._angular_diff(self.prev_pitch, self.closure_pose[0]),
+                    self._angular_diff(self.prev_yaw, self.closure_pose[1]),
+                    self._angular_diff(self.prev_roll, self.closure_pose[2]),
                 )
                 if pose_change > getattr(self.settings, 'pose_change_threshold', 15.0):
                     self.blink_candidate_valid = False
@@ -193,9 +189,9 @@ class TemporalTracker:
                 pose_changed_into_closure = (
                     previous_pose[0] is not None
                     and max(
-                        abs(self.prev_pitch - previous_pose[0]),
-                        abs(self.prev_yaw - previous_pose[1]),
-                        abs(self.prev_roll - previous_pose[2]),
+                        self._angular_diff(self.prev_pitch, previous_pose[0]),
+                        self._angular_diff(self.prev_yaw, previous_pose[1]),
+                        self._angular_diff(self.prev_roll, previous_pose[2]),
                     ) > pose_change_threshold
                 )
                 self.blink_candidate_valid = not pose_changed_into_closure

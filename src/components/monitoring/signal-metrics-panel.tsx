@@ -30,6 +30,7 @@ interface SignalMetricsPanelProps {
   yawnCount: number;
   headPoseDeviation: number;
   alertsTriggered: number;
+  connectionStatus: string;
 }
 
 export function SignalMetricsPanel({
@@ -38,13 +39,20 @@ export function SignalMetricsPanel({
   yawnCount,
   headPoseDeviation,
   alertsTriggered,
+  connectionStatus,
 }: SignalMetricsPanelProps) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
         <CardTitle>Signal Metrics</CardTitle>
+        <div className={`text-xs px-2 py-1 rounded border font-semibold ${
+          connectionStatus === 'Connected' ? 'bg-green-50 text-green-700 border-green-200' : 
+          connectionStatus === 'Connecting' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200'
+        }`}>
+          {connectionStatus}
+        </div>
       </CardHeader>
-      <CardContent className="px-5 pb-5 pt-0">
+      <CardContent className="px-4 pb-3 pt-0">
         <MetricRow
           label="Eye Closure Rate"
           value={eyeClosurePercent.toFixed(1)}

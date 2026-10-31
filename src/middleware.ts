@@ -9,7 +9,16 @@ export default withAuth(
   {
     callbacks: {
       // Return true when the user is authenticated (token exists).
-      authorized({ token }) {
+      authorized({ req, token }) {
+        if (req.nextUrl.pathname.startsWith('/api/auth')) return true;
+        if (req.nextUrl.pathname.startsWith('/login')) return true;
+        if (
+          req.nextUrl.pathname === '/api/telemetry' &&
+          req.headers.get('x-telemetry-token') === process.env.NEXTAUTH_SECRET
+        ) {
+          return true;
+        }
+        
         return !!token;
       },
     },
@@ -19,13 +28,6 @@ export default withAuth(
 // Protect all routes except /login and static/API paths
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     *   - /login (public)
-     *   - /api/auth/* (Auth.js endpoints)
-     *   - /_next/* (Next.js internals)
-     *   - /favicon.ico, /public assets
-     */
-    "/((?!login|api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

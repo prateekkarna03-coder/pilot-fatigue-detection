@@ -42,6 +42,17 @@ def calculate_head_pose(landmarks: FaceLandmarks, img_w: int = 1, img_h: int = 1
         return (0.0, 0.0, 0.0)
         
     rmat, _ = cv2.Rodrigues(rotation_vec)
-    angles, _, _, _, _, _ = cv2.RQDecomp3x3(rmat)
     
-    return angles[0], angles[1], angles[2]
+    sy = np.sqrt(rmat[0, 0] * rmat[0, 0] + rmat[1, 0] * rmat[1, 0])
+    singular = sy < 1e-6
+    
+    if not singular:
+        pitch = float(np.degrees(np.arctan2(rmat[2, 1], rmat[2, 2])))
+        yaw = float(np.degrees(np.arctan2(-rmat[2, 0], sy)))
+        roll = float(np.degrees(np.arctan2(rmat[1, 0], rmat[0, 0])))
+    else:
+        pitch = float(np.degrees(np.arctan2(-rmat[1, 2], rmat[1, 1])))
+        yaw = float(np.degrees(np.arctan2(-rmat[2, 0], sy)))
+        roll = 0.0
+        
+    return pitch, yaw, roll

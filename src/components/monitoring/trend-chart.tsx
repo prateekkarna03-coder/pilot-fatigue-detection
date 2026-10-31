@@ -1,11 +1,11 @@
+'use client';
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import type { TrendPoint } from "@/types";
+import { useLiveMetrics } from "./live-monitoring-provider";
 
-interface TrendChartProps {
-  data: TrendPoint[];
-}
-
-export function TrendChart({ data }: TrendChartProps) {
+export function TrendChart() {
+  const { trendData } = useLiveMetrics();
+  const data = trendData;
   const max = 100;
   const chartHeight = 100;
   const chartWidth = 400;
@@ -15,23 +15,25 @@ export function TrendChart({ data }: TrendChartProps) {
   const innerH = chartHeight - padY * 2;
 
   const points = data.map((d, i) => {
-    const x = padX + (i / (data.length - 1)) * innerW;
+    const x = padX + (i / Math.max(1, data.length - 1)) * innerW;
     const y = padY + innerH - (d.score / max) * innerH;
     return { x, y, ...d };
   });
 
   const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
   const areaPath =
-    `M ${points[0].x},${padY + innerH} ` +
-    points.map((p) => `L ${p.x},${p.y}`).join(" ") +
-    ` L ${points[points.length - 1].x},${padY + innerH} Z`;
+    points.length > 0
+      ? `M ${points[0].x},${padY + innerH} ` +
+        points.map((p) => `L ${p.x},${p.y}`).join(" ") +
+        ` L ${points[points.length - 1].x},${padY + innerH} Z`
+      : "";
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-4 pb-2">
         <CardTitle>Fatigue Score Trend</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 pb-3">
         <div className="relative w-full">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -64,45 +66,54 @@ export function TrendChart({ data }: TrendChartProps) {
               );
             })}
 
-            {/* Area fill */}
-            <path d={areaPath} fill="#1e2d4a" fillOpacity="0.06" />
+            {data.length > 0 && (
+              <>
+                {/* Area fill */}
+                <path d={areaPath} fill="#1e2d4a" fillOpacity="0.06" />
 
-            {/* Line */}
-            <polyline
-              points={polylinePoints}
-              fill="none"
-              stroke="#1e2d4a"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+                {/* Line */}
+                <polyline
+                  points={polylinePoints}
+                  fill="none"
+                  stroke="#1e2d4a"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
 
-            {/* Data points */}
-            {points.map((p) => (
-              <circle
-                key={p.time}
-                cx={p.x}
-                cy={p.y}
-                r="2.5"
-                fill="#1e2d4a"
-                stroke="white"
-                strokeWidth="1"
-              />
-            ))}
+                {/* Data points */}
+                {points.map((p, index) => (
+                  <circle
+                    key={`${p.timestamp ?? p.time}-${p.sequence ?? index}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r="2.5"
+                    fill="#1e2d4a"
+                    stroke="white"
+                    strokeWidth="1"
+                  />
+                ))}
 
-            {/* X-axis labels */}
-            {points.map((p) => (
-              <text
-                key={p.time + "-label"}
-                x={p.x}
-                y={chartHeight - 1}
-                textAnchor="middle"
-                style={{ fontSize: 7, fill: "#94a3b8" }}
-              >
-                {p.time}
-              </text>
-            ))}
+                {/* X-axis labels */}
+                {points.map((p, index) => (
+                  <text
+                    key={`${p.timestamp ?? p.time}-${p.sequence ?? index}-label`}
+                    x={p.x}
+                    y={chartHeight - 1}
+                    textAnchor="middle"
+                    style={{ fontSize: 7, fill: "#94a3b8" }}
+                  >
+                    {p.time}
+                  </text>
+                ))}
+              </>
+            )}
           </svg>
+          {data.length === 0 && (
+            <p className="py-8 text-center text-sm text-[#94a3b8]">
+              Waiting for live measurements...
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
